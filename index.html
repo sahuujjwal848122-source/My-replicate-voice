@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate AI Voice Studio</title>
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --accent-primary: #38bdf8;
+            --accent-primary-hover: #0ea5e9;
+            --border-color: #334155;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+        body { font-family: var(--font-family); background-color: var(--bg-primary); color: var(--text-primary); margin: 0; padding: 1rem; }
+        .container { max-width: 600px; margin: 2rem auto; }
+        header { text-align: center; margin-bottom: 2rem; }
+        h1 { color: var(--accent-primary); }
+        .tabs { display: flex; margin-bottom: 1.5rem; background-color: var(--bg-secondary); border-radius: 10px; padding: 5px; }
+        .tab-button { flex: 1; padding: 0.8rem; border: none; background-color: transparent; color: var(--text-secondary); font-size: 1rem; font-weight: 600; cursor: pointer; border-radius: 8px; transition: all 0.2s ease; }
+        .tab-button.active { background-color: var(--accent-primary); color: var(--bg-primary); }
+        .tab-content { display: none; background-color: var(--bg-secondary); padding: 2rem; border-radius: 12px; border: 1px solid var(--border-color); }
+        .tab-content.active { display: block; }
+        .form-group { margin-bottom: 1.5rem; }
+        label { display: block; margin-bottom: 0.5rem; color: var(--text-secondary); }
+        input, textarea, select, button { width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); background-color: var(--bg-primary); color: var(--text-primary); font-size: 1rem; }
+        button { background-color: var(--accent-primary); font-weight: bold; cursor: pointer; color: var(--bg-primary); }
+        button:disabled { background-color: var(--border-color); cursor: not-allowed; }
+        #status { text-align: center; margin-top: 1.5rem; color: var(--text-secondary); min-height: 20px; font-weight: 600; }
+        audio { width: 100%; margin-top: 1rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Ultimate AI Voice Studio</h1>
+            <p>Instant Voice Cloning & Text-to-Speech</p>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-button active" data-tab="clone">Voice Clone</button>
+            <button class="tab-button" data-tab="tts">Text-to-Speech</button>
+        </div>
+
+        <!-- Voice Clone Tab -->
+        <div id="clone" class="tab-content active">
+            <div class="form-group">
+                <label for="audio-file">1. Upload Voice Sample (MP3/WAV)</label>
+                <input type="file" id="audio-file" accept="audio/*">
+            </div>
+            <div class="form-group">
+                <label for="clone-text-input">2. Enter Text to Speak</label>
+                <textarea id="clone-text-input" rows="4">Hello world! This is my cloned voice.</textarea>
+            </div>
+            <div class="form-group">
+                <label for="clone-language-select">3. Select Language</label>
+                <select id="clone-language-select">
+                    <option value="en">English</option>
+                    <option value="hi">Hindi</option>
+                    <option value="es">Spanish</option>
+                </select>
+            </div>
+            <button id="generate-clone-btn">Generate Cloned Audio</button>
+        </div>
+
+        <!-- Text-to-Speech Tab -->
+        <div id="tts" class="tab-content">
+            <div class="form-group">
+                <label for="tts-voice-select">1. Select a Pre-made Voice</label>
+                <select id="tts-voice-select"></select>
+            </div>
+            <div class="form-group">
+                <label for="tts-text-input">2. Enter Text to Speak</label>
+                <textarea id="tts-text-input" rows="4">This is a test of a standard high-quality voice.</textarea>
+            </div>
+             <div class="form-group">
+                <label for="tts-language-select">3. Select Language</label>
+                <select id="tts-language-select">
+                    <option value="en">English</option>
+                    <option value="hi">Hindi</option>
+                    <option value="es">Spanish</option>
+                </select>
+            </div>
+            <button id="generate-tts-btn">Generate Standard Audio</button>
+        </div>
+
+        <div id="status" class="status"></div>
+        <div id="result-container" style="display: none; margin-top: 1.5rem; background-color: var(--bg-secondary); padding: 1.5rem; border-radius: 12px;">
+            <h3 style="text-align: center; margin-bottom: 1rem;">Result</h3>
+            <audio id="audio-player" controls></audio>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        'use strict';
+        const ui = {
+            tabs: document.querySelectorAll('.tab-button'),
+            tabContents: document.querySelectorAll('.tab-content'),
+            status: document.getElementById('status'),
+            resultContainer: document.getElementById('result-container'),
+            audioPlayer: document.getElementById('audio-player'),
+            // Clone UI
+            audioFile: document.getElementById('audio-file'),
+            cloneTextInput: document.getElementById('clone-text-input'),
+            cloneLangSelect: document.getElementById('clone-language-select'),
+            generateCloneBtn: document.getElementById('generate-clone-btn'),
+            // TTS UI
+            ttsVoiceSelect: document.getElementById('tts-voice-select'),
+            ttsTextInput: document.getElementById('tts-text-input'),
+            ttsLangSelect: document.getElementById('tts-language-select'),
+            generateTtsBtn: document.getElementById('generate-tts-btn'),
+        };
+
+        const PREMADE_VOICES = [
+            { name: "Rachel (Female, Calm)", url: "https://replicate.delivery/pbxt/IZi3x4a268aF2Zf00B1S91a32a6PB3b1B3iYJ9xJ/smp.wav" },
+            { name: "Adam (Male, Deep)", url: "https://replicate.delivery/pbxt/59Gm0A5w0sY2Y3B2jY2e5b1S2a4E3A3B1d3c3d2I/smp.wav" },
+            { name: "Bella (Female, Upbeat)", url: "https://replicate.delivery/pbxt/J1g3x3a268aF2Zf00B1S91a32a6PB3b1B3iYJ9xJ/smp.wav" },
+        ];
+
+        function init() {
+            // Populate TTS voices
+            PREMADE_VOICES.forEach(voice => {
+                const option = document.createElement('option');
+                option.value = voice.url;
+                option.textContent = voice.name;
+                ui.ttsVoiceSelect.appendChild(option);
+            });
+
+            // Tab switching logic
+            ui.tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    ui.tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    const targetTab = tab.getAttribute('data-tab');
+                    ui.tabContents.forEach(content => {
+                        content.classList.toggle('active', content.id === targetTab);
+                    });
+                });
+            });
+
+            ui.generateCloneBtn.addEventListener('click', handleGeneration.bind(null, 'clone'));
+            ui.generateTtsBtn.addEventListener('click', handleGeneration.bind(null, 'tts'));
+        }
+
+        async function handleGeneration(mode) {
+            let text, language, audioDataUrl;
+            
+            if (mode === 'clone') {
+                const file = ui.audioFile.files[0];
+                text = ui.cloneTextInput.value.trim();
+                language = ui.cloneLangSelect.value;
+                if (!file || !text) {
+                    alert('For cloning, please upload an audio file and enter text.');
+                    return;
+                }
+                ui.generateCloneBtn.disabled = true;
+                ui.status.textContent = 'Uploading and starting clone job... this can take a minute.';
+                audioDataUrl = await fileToDataUrl(file);
+            } else { // TTS mode
+                audioDataUrl = ui.ttsVoiceSelect.value;
+                text = ui.ttsTextInput.value.trim();
+                language = ui.ttsLangSelect.value;
+                if (!text) {
+                    alert('Please enter text to generate audio.');
+                    return;
+                }
+                ui.generateTtsBtn.disabled = true;
+                ui.status.textContent = 'Starting Text-to-Speech job...';
+            }
+
+            ui.resultContainer.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/clone', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text, language, audioDataUrl })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to generate audio.');
+                }
+
+                const result = await response.json();
+                if (!result.audio_url) {
+                    throw new Error('API did not return an audio URL.');
+                }
+                
+                ui.audioPlayer.src = result.audio_url;
+                ui.resultContainer.style.display = 'block';
+                ui.status.textContent = 'Generation Complete!';
+            } catch (error) {
+                ui.status.textContent = `Error: ${error.message}`;
+            } finally {
+                ui.generateCloneBtn.disabled = false;
+                ui.generateTtsBtn.disabled = false;
+            }
+        }
+
+        function fileToDataUrl(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        init();
+    })();
+    </script>
+</body>
+</html>
